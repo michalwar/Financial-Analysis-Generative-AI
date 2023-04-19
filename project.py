@@ -123,8 +123,8 @@ def get_stocks_listing(**kwargs):
     api_key = kwargs.get("api_key")
     status = kwargs.get("status", "active")
     assetType = kwargs.get("assetType", "stock")
-    exchange1 = kwargs.get("exchange", "nyse")
-    exchange2 = kwargs.get("exchange", "nasdaq")
+    exchange1 = kwargs.get("exchange1", "nyse")
+    exchange2 = kwargs.get("exchange2", "nasdaq")
 
     base_url = f'https://www.alphavantage.co/query?function=LISTING_STATUS&apikey={api_key}'
 
@@ -268,8 +268,8 @@ def process_fundamental_data_balance_sheet(**kwargs):
     relevant_info_list = []
 
     for company in filtered_data:
-        symbol = company['symbol']
-        annual_reports = company['annualReports']
+        symbol = company.get('symbol', None)
+        annual_reports = company.get('annualReports', None)
 
         if annual_reports:
             for report in annual_reports:
@@ -316,8 +316,8 @@ def process_fundamental_data_cash_flow(**kwargs):
     relevant_info_list = []
 
     for company in filtered_data:
-        symbol = company['symbol']
-        annual_reports = company['annualReports']
+        symbol = company.get('symbol', None)
+        annual_reports = company.get('annualReports', None)
 
         if annual_reports:
             for report in annual_reports:
@@ -341,7 +341,7 @@ def process_fundamental_data_cash_flow(**kwargs):
     return relevant_info_list
 
 
-
+# Get and fetch data ===========================================================================================
 
 def fetch_fundamental_data(**kwargs):
                             
@@ -393,6 +393,15 @@ def fetch_stocks_listing(**kwargs):
     return symbols_list, df_listed_stocks
 
 
+def get_company_data_by_key(**kwargs):
+    stock_data = kwargs.get("stock_data")
+    key = kwargs.get("key", "symbol")
+    company_symbol = kwargs.get("company_symbol")
+
+    output_list = [company for company in stock_data if company[key] == company_symbol]
+
+    return output_list
+
 
 # Main execution ========================================================================================================
 
@@ -427,6 +436,7 @@ stock_data_income = fetch_fundamental_data(api_key = aplha_vantage_key,
 all_results_income = process_fundamental_data_income(stock_data = stock_data_income)
 
 
+
 # Companies Balance sheet
 
 stock_data_balance_sheet = fetch_fundamental_data(api_key = aplha_vantage_key,
@@ -434,7 +444,7 @@ stock_data_balance_sheet = fetch_fundamental_data(api_key = aplha_vantage_key,
                                                   fundamental_data = "BALANCE_SHEET",
                                                   data_path = data_path)
 
-#all_results_balance_sheet = process_fundamental_data_balance_sheet(stock_data = stock_data_balance_sheet)
+all_results_balance_sheet = process_fundamental_data_balance_sheet(stock_data = stock_data_balance_sheet)
 
 
 # Companies Cash flow
@@ -444,7 +454,7 @@ stock_data_cash_flow = fetch_fundamental_data(api_key = aplha_vantage_key,
                                               fundamental_data = "CASH_FLOW",
                                               data_path = data_path)
 
-#all_results_cash_flow = process_fundamental_data_cash_flow(stock_data = stock_data_cash_flow)
+all_results_cash_flow = process_fundamental_data_cash_flow(stock_data = stock_data_cash_flow)
 
 
 
@@ -452,12 +462,21 @@ stock_data_cash_flow = fetch_fundamental_data(api_key = aplha_vantage_key,
 
 
 
+get_company_data_by_key(stock_data = all_results_overview, 
+                        key = "Symbol", 
+                        company_symbol = "NVDA")
 
+get_company_data_by_key(stock_data = all_results_income, 
+                        key = "Symbol", 
+                        company_symbol = "NVDA")
 
+get_company_data_by_key(stock_data = all_results_balance_sheet, 
+                        key = "Symbol", 
+                        company_symbol = "NVDA")
 
-
-
-
+get_company_data_by_key(stock_data = all_results_cash_flow,
+                        key = "Symbol",
+                        company_symbol = "NVDA")
 
 
 
