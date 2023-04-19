@@ -5,6 +5,8 @@ import os
 import io
 import requests
 import time
+import pickle
+from tqdm import tqdm
 
 from dotenv import load_dotenv
 
@@ -51,11 +53,15 @@ config = {
 
 
 
+# Helper functions ======================================================================================================
 
 def save_dataframe_to_csv(dataframe, file_path):
     dataframe.to_csv(file_path, index = False)
     print(f"Data saved to: {file_path}")
 
+
+def safe_divide(numerator, denominator):
+    return float(numerator) / float(denominator) if float(denominator) != 0 else 0
 
 
 def remove_unwanted_values(item):
@@ -66,8 +72,14 @@ def remove_unwanted_values(item):
     else:
         return item
     
+def to_float(value, default = 0):
+    if (value is None) | (value == 'None'):
+        return default
+    return float(value)
 
 
+
+# Main pulling functions =================================================================================================
 def get_fundamental_data(**kwargs):
     # Get fundamental data for a list of stocks.
 
@@ -77,16 +89,32 @@ def get_fundamental_data(**kwargs):
 
     base_url = "https://www.alphavantage.co/query?"
     results = []
+    start_time = time.time()
+    max_attempts = 100
 
-    for stock in symbols_list:
-        url = f"{base_url}function={fundamental_data}&symbol={stock}&apikey={api_key}"
-        response = requests.get(url)
-        json_data = response.json()
-        results.append(json_data)
-        time.sleep(0.41)  # Wait xx seconds between requests to avoid hitting API rate limits
+    for stock in tqdm(symbols_list, desc="Fetching data", unit="stock"):
+        attempts = 0
+        while attempts < max_attempts:
+            try:
+                url = f"{base_url}function={fundamental_data}&symbol={stock}&apikey={api_key}"
+                response = requests.get(url)
+                json_data = response.json()
+                results.append(json_data)
+                break  # Exit the loop if the request is successful
+            except Exception as e:
+                print(f"Error fetching data for {stock}: {e}. Retrying...")
+                attempts += 1
+                time.sleep(1)  # Wait before retrying the request
+
+        if attempts == max_attempts:
+            print(f"Failed to fetch data for {stock} after {max_attempts} attempts. Skipping...")
+        
+        time.sleep(1)  # Wait xx seconds between requests to avoid hitting API rate limits
+
+    elapsed_time = time.time() - start_time
+    print(f"Total time elapsed: {elapsed_time:.2f} seconds")
 
     return results
-
 
 
 def get_stocks_listing(**kwargs):
@@ -124,13 +152,14 @@ def get_stocks_listing(**kwargs):
     return df_temp
 
 
+# Process data ===========================================================================================================
 
 def process_fundamental_data_overview(**kwargs):
     # Process fundamental data for a list of stocks.
 
-    stock_data_overview = kwargs.get("stock_data")
+    stock_data = kwargs.get("stock_data")
     
-    data = stock_data_overview.copy()
+    data = stock_data.copy()
     # Remove empty values
     filtered_data = [company_data for company_data in data if company_data]
 
@@ -138,7 +167,10 @@ def process_fundamental_data_overview(**kwargs):
     
 
     for company_data in filtered_data:
-        gross_profit_margin = float(company_data.get('GrossProfitTTM', 0)) / float(company_data.get('RevenueTTM', 1)) if float(company_data.get('GrossProfitTTM', 0)) != 0 else 0
+
+        gross_profit = to_float(company_data.get('GrossProfitTTM', 0))
+        revenue = to_float(company_data.get('RevenueTTM', 1))
+        gross_profit_margin = safe_divide(gross_profit, revenue)
 
         relevant_info = {
             'Symbol': company_data.get('Symbol', None),
@@ -163,7 +195,7 @@ def process_fundamental_data_overview(**kwargs):
             'RevenuePerShare': company_data.get('RevenuePerShareTTM', None),
         }
         relevant_info_list.append(relevant_info)
-
+        
     relevant_info_list = remove_unwanted_values(relevant_info_list)
 
     return relevant_info_list
@@ -175,9 +207,10 @@ def process_fundamental_data_overview(**kwargs):
 def process_fundamental_data_income(**kwargs):
     # Process fundamental data for a list of stocks.
 
-    stock_data_income = kwargs.get("stock_data")
+    stock_data = kwargs.get("stock_data")
+    threshold_date = kwargs.get("threshold_date", '2021-01-01') 
     
-    data = stock_data_income.copy()
+    data = stock_data.copy()
     # Remove empty values
     filtered_data = [company_data for company_data in data if company_data]
 
@@ -189,15 +222,22 @@ def process_fundamental_data_income(**kwargs):
         annual_reports = company['annualReports']
 
         for report in annual_reports:
-            gross_profit_margin = float(report.get('grossProfit', 0)) / float(report.get('totalRevenue', 0)) if float(report.get('totalRevenue', 0)) != 0 else 0
-            operating_margin = float(report.get('operatingIncome', 0)) / float(report.get('totalRevenue', 0)) if float(report.get('totalRevenue', 0)) != 0 else 0
-            net_profit_margin = float(report.get('netIncome', 0)) / float(report.get('totalRevenue', 0)) if float(report.get('totalRevenue', 0)) != 0 else 0
+
+            gross_profit = to_float(report.get('grossProfit', 0))
+            total_revenue = to_float(report.get('totalRevenue', 0))
+            operating_income = to_float(report.get('operatingIncome', 0))
+            net_income = to_float(report.get('netIncome', 0))
+            fiscal_date_ending = report.get('fiscalDateEnding', None)
+
+            gross_profit_margin = safe_divide(gross_profit, total_revenue)
+            operating_margin = safe_divide(operating_income, total_revenue)
+            net_profit_margin = safe_divide(net_income, total_revenue)
 
             relevant_info = {
                 'Symbol': symbol,
-                'FiscalDateEnding': report.get('fiscalDateEnding', None),
-                'GrossProfit': report.get('grossProfit', None),
-                'OperatingIncome': report.get('operatingIncome', None),
+                'FiscalDateEnding': fiscal_date_ending,
+                'GrossProfit': gross_profit,
+                'OperatingIncome': operating_income,
                 'GrossProfitMargin': gross_profit_margin,
                 'OperatingMargin': operating_margin,
                 'NetProfitMargin': net_profit_margin,
@@ -206,6 +246,92 @@ def process_fundamental_data_income(**kwargs):
 
 
     relevant_info_list = remove_unwanted_values(relevant_info_list)
+    relevant_info_list = [company for company in relevant_info_list if pd.to_datetime(company['FiscalDateEnding']) >= pd.to_datetime(threshold_date)]
+
+    return relevant_info_list
+
+
+
+def process_fundamental_data_balance_sheet(**kwargs):
+    # Process fundamental data for a list of stocks.
+
+    stock_data = kwargs.get("stock_data")
+    threshold_date = kwargs.get("threshold_date", '2021-01-01')
+    
+    data = stock_data.copy()
+    # Remove empty values
+    filtered_data = [company_data for company_data in data if company_data]
+
+    relevant_info_list = []
+
+    for company in filtered_data:
+        symbol = company['symbol']
+        annual_reports = company['annualReports']
+
+        for report in annual_reports:
+            total_liabilities = to_float(report.get('totalLiabilities', 0))
+            total_shareholder_equity = to_float(report.get('totalShareholderEquity', 0))
+            total_current_assets = to_float(report.get('totalCurrentAssets', 0))
+            total_current_liabilities = to_float(report.get('totalCurrentLiabilities', 0))
+            retained_earnings = to_float(report.get('retainedEarnings', 0))
+            common_stock_shares_outstanding = report.get('commonStockSharesOutstanding', 0)
+            fiscal_date_ending = report.get('fiscalDateEnding', None)
+
+            debt_to_equity_ratio = safe_divide(total_liabilities, total_shareholder_equity)
+            current_ratio = safe_divide(total_current_assets, total_current_liabilities)
+            return_on_equity = safe_divide(retained_earnings, total_shareholder_equity)
+
+            relevant_info = {
+                'Symbol': symbol,
+                'FiscalDateEnding': fiscal_date_ending,
+                'DebtToEquityRatio': debt_to_equity_ratio,
+                'CurrentRatio': current_ratio,
+                'ReturnOnEquity': return_on_equity,
+                'commonStockSharesOutstanding': common_stock_shares_outstanding,
+            }
+            relevant_info_list.append(relevant_info)
+
+    relevant_info_list = remove_unwanted_values(relevant_info_list)
+    relevant_info_list = [company for company in relevant_info_list if pd.to_datetime(company['FiscalDateEnding']) >= pd.to_datetime(threshold_date)]
+
+    return relevant_info_list
+
+
+def process_fundamental_data_cash_flow(**kwargs):
+    # Process fundamental data for a list of stocks.
+
+    stock_data = kwargs.get("stock_data")
+    threshold_date = kwargs.get("threshold_date", '2021-01-01')
+    
+    data = stock_data.copy()
+    data = stock_data_cash_flow.copy()
+    # Remove empty values
+    filtered_data = [company_data for company_data in data if company_data]
+    
+
+    relevant_info_list = []
+
+    for company in filtered_data:
+        symbol = company['symbol']
+        annual_reports = company['annualReports']
+
+        for report in annual_reports:
+            operating_cashflow = report.get('operatingCashflow', None)
+            capital_expenditures = report.get('capitalExpenditures', None)
+            dividend_payout = report.get('dividendPayout', None)
+            fiscal_date_ending = report.get('fiscalDateEnding', None)
+
+            relevant_info = {
+                'Symbol': symbol,
+                'FiscalDateEnding': fiscal_date_ending,
+                'OperatingCashflow': operating_cashflow,
+                'CapitalExpenditures': capital_expenditures,
+                'DividendPayout': dividend_payout
+            }
+            relevant_info_list.append(relevant_info)
+
+    relevant_info_list = remove_unwanted_values(relevant_info_list)
+    relevant_info_list = [company for company in relevant_info_list if pd.to_datetime(company['FiscalDateEnding']) >= pd.to_datetime(threshold_date)]
 
     return relevant_info_list
 
@@ -213,47 +339,65 @@ def process_fundamental_data_income(**kwargs):
 
 
 
+# Main execution ========================================================================================================
+
+data_path = "data/"
+file_path_listings = os.path.join(data_path, "listed_stocks.csv")
+
+if not os.path.exists(file_path_listings):
+    df_listed_stocks = get_stocks_listing(api_key = aplha_vantage_key)
+    save_dataframe_to_csv(df_listed_stocks, file_path_listings)
+else:
+    df_listed_stocks = pd.read_csv(file_path_listings)
 
 
 
 
-
-
-df_listed_stocks = get_stocks_listing(api_key = aplha_vantage_key)
-
-save_dataframe_to_csv(df_listed_stocks, "data/listed_stocks.csv")
+symbols_list = df_listed_stocks['symbol'].tolist()
 
 
 
-symbols_list = df_listed_stocks['symbol'].tolist()[:5]
-
-
-
-
+# Companies Overview
 stock_data_overview = get_fundamental_data(api_key = aplha_vantage_key, symbols_list = symbols_list, fundamental_data = "OVERVIEW")
-all_results_overview = process_fundamental_data_overview(stock_data = stock_data_overview)
+# Save the list to a file
+pickle_file_path = os.path.join(data_path, "stock_data_overview.pkl")
+with open(pickle_file_path, 'wb') as f:
+    pickle.dump(stock_data_overview, f)
 
-all_results_overview_clean = remove_unwanted_values(all_results_overview)
+#all_results_overview = process_fundamental_data_overview(stock_data = stock_data_overview)
 
 
+# Companies Income statement
 stock_data_income = get_fundamental_data(api_key = aplha_vantage_key, symbols_list = symbols_list, fundamental_data = "INCOME_STATEMENT")
-all_results_income = process_fundamental_data_income(stock_data = stock_data_income)
+# Save the list to a file
+pickle_file_path = os.path.join(data_path, "stock_data_income.pkl")
+with open(pickle_file_path, 'wb') as f:
+    pickle.dump(stock_data_income, f)
+
+#all_results_income = process_fundamental_data_income(stock_data = stock_data_income)
+
+
+# Companies Balance sheet
+stock_data_balance_sheet = get_fundamental_data(api_key = aplha_vantage_key, symbols_list = symbols_list, fundamental_data = "BALANCE_SHEET")
+# Save the list to a file
+pickle_file_path = os.path.join(data_path, "stock_data_balance_sheet.pkl")
+with open(pickle_file_path, 'wb') as f:
+    pickle.dump(stock_data_balance_sheet, f)
+
+#all_results_balance_sheet = process_fundamental_data_balance_sheet(stock_data = stock_data_balance_sheet)
+
+
+# Companies Cash flow
+stock_data_cash_flow = get_fundamental_data(api_key = aplha_vantage_key, symbols_list = symbols_list, fundamental_data = "CASH_FLOW")
+# Save the list to a file
+pickle_file_path = os.path.join(data_path, "stock_data_cash_flow.pkl")
+with open(pickle_file_path, 'wb') as f:
+    pickle.dump(stock_data_cash_flow, f)
+
+#all_results_cash_flow = process_fundamental_data_cash_flow(stock_data = stock_data_cash_flow)
 
 
 
-
-
-
-[company for company in all_results_overview if company['Symbol'] == 'AAC']
-
-
-
-
-
-
-
-
-stock_data_listing = get_fundamental_data(api_key = aplha_vantage_key, symbols_list = symbols_list, fundamental_data = "LISTING_STATUS")
 
 
 
