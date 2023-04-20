@@ -31,9 +31,6 @@ print("All libraries loaded")
 
 load_dotenv() 
 
-aplha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY")
-openai.organization = os.getenv("OPENAI_ORG_ID")
-
 openai.Model.list()
 
 
@@ -51,7 +48,8 @@ config = {
 }
 
 
-
+aplha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+openai.organization = os.getenv("OPENAI_ORG_ID")
 
 # Helper functions ======================================================================================================
 
@@ -308,7 +306,6 @@ def process_fundamental_data_cash_flow(**kwargs):
     threshold_date = kwargs.get("threshold_date", '2021-01-01')
     
     data = stock_data.copy()
-    data = stock_data_cash_flow.copy()
     # Remove empty values
     filtered_data = [company_data for company_data in data if company_data]
     

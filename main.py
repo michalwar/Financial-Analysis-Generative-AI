@@ -1,76 +1,99 @@
+# main.py
+
 import os
-import sys
-from dotenv import load_dotenv
-
-import pandas as pd
-import numpy as np
-
 import openai
-import requests
 
-
-openai.organization = os.getenv("OPENAI_ORG_ID")
-
-
-load_dotenv()  # Loads the environment variables from the .env file
+from data_fetcher import DataFetcher
+from data_processing import DataProcessor
 
 
 
-openai.Model.list()
 
+def main():
+    data_path = "data/"
+    alpha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY")
+    openai.organization = os.getenv("OPENAI_ORG_ID")
 
+    if not alpha_vantage_key:
+        raise ValueError("Alpha Vantage API key is not set.")
 
-# Generate input for GPT-3
-input_text = f"The closing price for {symbol} on {latest_date} was {closing_price}. What do you think about this stock?"
-input_text = "test"
+    data_fetcher = DataFetcher(api_key=alpha_vantage_key, data_path=data_path)
+    data_processor = DataProcessor()
 
-# Query GPT-3
-response = openai.Completion.create(
-    engine="text-davinci-002",
-    prompt=input_text,
-    max_tokens=100,
-    n=1,
-    stop=None,
-    temperature=0.5,
-)
-
-# Print GPT-3's response
-print(response.choices[0].text.strip())
-
-
-from ftplib import FTP
-
-def is_file(ftp, name):
     try:
-        ftp.cwd(name)
+        symbols_list, df_listed_stocks = data_fetcher.fetch_stocks_listing(status="active", assetType="stock")
     except Exception as e:
-        return True
-    ftp.cwd('..')
-    return False
+        print(f"Error fetching stocks listing: {e}")
+        
 
-ftp = FTP('ftp.nasdaqtrader.com')
-ftp.login()
+    try:
+        stock_data_overview = data_fetcher.fetch_fundamental_data(symbols_list=symbols_list, fundamental_data="OVERVIEW")
+        all_results_overview = data_processor.process_fundamental_data_overview(stock_data=stock_data_overview)
+    except Exception as e:
+        print(f"Error fetching and processing overview data: {e}")
+        
 
-ftp.cwd('symboldirectory')
+    try:
+        stock_data_income_statement = data_fetcher.fetch_fundamental_data(symbols_list=symbols_list, fundamental_data="INCOME_STATEMENT")
+        all_results_income_statement = data_processor.process_fundamental_data_income(stock_data=stock_data_income_statement)
+    except Exception as e:
+        print(f"Error fetching and processing income statement data: {e}")
+        
 
-file_list = []
-ftp.dir(lambda x: file_list.append(x))
+    try:
+        stock_data_balance_sheet = data_fetcher.fetch_fundamental_data(symbols_list=symbols_list, fundamental_data="BALANCE_SHEET")
+        all_results_balance_sheet = data_processor.process_fundamental_data_balance_sheet(stock_data=stock_data_balance_sheet)
+    except Exception as e:
+        print(f"Error fetching and processing balance sheet data: {e}")
+        
+
+    try:
+        stock_data_cash_flow = data_fetcher.fetch_fundamental_data(symbols_list=symbols_list, fundamental_data="CASH_FLOW")
+        all_results_cash_flow = data_processor.process_fundamental_data_cash_flow(stock_data=stock_data_cash_flow)
+    except Exception as e:
+        print(f"Error fetching and processing cash flow data: {e}")
+        
 
 
-file_list = [entry.split()[-1] for entry in file_list if is_file(ftp, entry.split()[-1])]
-
-# Download all files from file_list, and write to data folder in current directory
-for file in file_list:
-    with open(f"data/{file}", "wb") as f:
-        ftp.retrbinary(f"RETR {file}", f.write)
-
-
-filename = 'nasdaqlisted.txt'
-with open(filename, 'wb') as local_file:
-    ftp.retrbinary(f'RETR {filename}', local_file.write)
+    company_symbol_key = "Symbol"
+    company_symbol_stock = "NVDA"
+    
+    company_analyze_temp = []
+    company_analyze = []
 
 
-print(file_list)
+    company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_overview, 
+                                                                  key = company_symbol_key,
+                                                                  company_symbol = company_symbol_stock)
 
-ftp.quit()
+    company_analyze.append(company_analyze_temp)
+
+    company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_income_statement, 
+                                                                  key = company_symbol_key, 
+                                                                  company_symbol = company_symbol_stock)
+
+    company_analyze.append(company_analyze_temp)
+
+    company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_balance_sheet,
+                                                                  key = company_symbol_key,
+                                                                  company_symbol = company_symbol_stock)
+    
+    company_analyze.append(company_analyze_temp)
+    
+
+    company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_cash_flow,
+                                                                  key = company_symbol_key,
+                                                                  company_symbol = company_symbol_stock)
+
+    company_analyze.append(company_analyze_temp)
+    
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
 

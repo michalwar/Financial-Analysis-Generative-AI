@@ -1,3 +1,5 @@
+# data_fetcher.py
+
 import requests
 import time
 import pandas as pd
@@ -10,12 +12,16 @@ from helpers import save_dataframe_to_csv
 
 class DataFetcher:
 
-    def __init__(self, api_key):
+    def __init__(self, api_key, 
+                 base_url = "https://www.alphavantage.co/query?",
+                 data_path = "data/"):
+        
         self.api_key = api_key
-        self.base_url = "https://www.alphavantage.co/query?"
-        self.data_path = "data/"
+        self.base_url = base_url
+        self.data_path = data_path
+        self.listed_stocks_file_name = "listed_stocks.csv"
 
-    def get_fundamental_data(self, **kwargs):
+    def _get_fundamental_data(self, **kwargs):
         
         symbols_list = kwargs.get("symbols_list")
         fundamental_data = kwargs.get("fundamental_data")
@@ -49,7 +55,7 @@ class DataFetcher:
         return results
     
 
-    def get_stocks_listing(self, **kwargs):
+    def _get_stocks_listing(self, **kwargs):
         # Get listing status for all stocks.
 
         status = kwargs.get("status", "active")
@@ -85,11 +91,11 @@ class DataFetcher:
     
     def fetch_stocks_listing(self, **kwargs):
             
-        file_path_listings = os.path.join(self.data_path, "listed_stocks.csv")
+        file_path_listings = os.path.join(self.data_path, self.listed_stocks_file_name)
 
         if not os.path.exists(file_path_listings):
             print("CSV file for listed stocks not found. Fetching data...")
-            df_listed_stocks = self.get_stocks_listing(api_key = self.api_key)
+            df_listed_stocks = self._get_stocks_listing(api_key = self.api_key, **kwargs)
             save_dataframe_to_csv(df_listed_stocks, file_path_listings)
             print("Listed stocks data saved to CSV file.")
         else:
@@ -112,7 +118,7 @@ class DataFetcher:
         if not os.path.exists(pickle_file_path):
             print(f"Pickle file for {fundamental_data} not found. Fetching data...")
             # Get fundamental data
-            data = self.get_fundamental_data(api_key = self.api_key, symbols_list=symbols_list, fundamental_data=fundamental_data)
+            data = self._get_fundamental_data(api_key = self.api_key, symbols_list=symbols_list, fundamental_data=fundamental_data)
             
             print(f"Saving {fundamental_data} data to pickle file...")
             # Save the list to a file
