@@ -26,9 +26,16 @@ print("All libraries loaded")
 
 
 
+
+
+
+
+
+
+
 load_dotenv() 
 
-aplha_vantage_key = os.getenv("ALPHA_VANTAGE_KEY")
+aplha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY")
 
 
 
@@ -37,7 +44,7 @@ config = {
         "key": aplha_vantage_key,
         "symbol": "IBM",
         "outputsize": "full",
-        "key_adjusted_close_stock_price": "5. adjusted close",
+        "stock_price_close": "5. adjusted close",
         "trading_volume": "6. volume",
     },
 }
@@ -53,7 +60,7 @@ def download_stock_data_raw(config):
     data_date = [date for date in data.keys()]
     data_date.reverse()
 
-    data_close_price = [float(data[date][config["alpha_vantage"]["key_adjusted_close_stock_price"]]) for date in data.keys()]
+    data_close_price = [float(data[date][config["alpha_vantage"]["stock_price_close"]]) for date in data.keys()]
 
 
     data_close_price.reverse()
@@ -73,14 +80,14 @@ def download_stock_data_df(config):
     
     data = pd.DataFrame(data).T
 
-    data.rename(columns = {config["alpha_vantage"]["key_adjusted_close_stock_price"]: "key_adjusted_close_stock_price",
+    data.rename(columns = {config["alpha_vantage"]["stock_price_close"]: "stock_price_close",
                            config["alpha_vantage"]["trading_volume"]: "trading_volume"},
                            inplace = True)
 
     data.index = pd.to_datetime(data.index)
     data.index.name = "date"
 
-    data = data.loc[:, ["key_adjusted_close_stock_price", "trading_volume"]]
+    data = data.loc[:, ["stock_price_close", "trading_volume"]]
 
     return data
 
@@ -93,31 +100,44 @@ def download_stock_data_df(**kwargs):
     key = kwargs.get("key")
     stock_symbol = kwargs.get("symbol")
     outputsize = kwargs.get("outputsize")
-    key_adjusted_close_stock_price = kwargs.get("key_adjusted_close_stock_price")
+    stock_price_close = kwargs.get("stock_price_close")
     trading_volume = kwargs.get("trading_volume")
+    period = kwargs.get("period")
 
     ts = TimeSeries(key = key)  
-
-    data, meta_data = ts.get_daily_adjusted(stock_symbol, outputsize = outputsize)
     
+    if period == "daily":
+        data, meta_data = ts.get_daily_adjusted(stock_symbol, outputsize = outputsize)
+    elif period == "weekly":
+        data, meta_data = ts.get_weekly_adjusted(stock_symbol)
+    elif period == "monthly":
+        data, meta_data = ts.get_monthly_adjusted(stock_symbol)
+    else:
+        raise ValueError("period must be either daily or weekly")
+
     data = pd.DataFrame(data).T
 
-    data.rename(columns = {key_adjusted_close_stock_price: "key_adjusted_close_stock_price",
+    data.rename(columns = {stock_price_close: "stock_price_close",
                            trading_volume: "trading_volume"},
                            inplace = True)
 
-    data = data.loc[:, ["key_adjusted_close_stock_price", "trading_volume"]]
+    data = data.loc[:, ["stock_price_close", "trading_volume"]]
 
 
-    data.index = pd.to_datetime(data.index)
-    data.index.name = "trading_date"
+    data.loc[:, "trading_date"] = pd.to_datetime(data.index)
+    data.loc[:, "company"] = stock_symbol
+    data.reset_index(drop = True, inplace = True)
 
     return data
 
 
 
 
-download_stock_data_df(**config["alpha_vantage"])
+download_stock_data_df(**config["alpha_vantage"], period = "monthly")
+
+
+
+
 
 
 

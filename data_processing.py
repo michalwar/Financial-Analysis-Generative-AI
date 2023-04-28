@@ -2,11 +2,25 @@ import pandas as pd
 from helpers import to_float, safe_divide, remove_unwanted_values
 
 class DataProcessor:
+    # This module contains a class called `DataProcessor` which is used to process fundamental data for a list of stocks.
+    # The class has four methods: `process_fundamental_data_overview`, `process_fundamental_data_income`, 
+    # `process_fundamental_data_balance_sheet`, and `process_fundamental_data_cash_flow`.
+    # Each method processes a different type of fundamental data and returns a list of relevant information 
+    # for each company in the input stock data.
+    # The methods use helper functions defined in the `helpers.py` module to perform data processing tasks such as converting strings 
+    # to float values and handling division by zero.
+    # The `DataProcessor` class is intended to be used in conjunction with the `StockDataFetcher` class 
+    # in the `stock_data_fetcher.py` module to fetch and process stock data from the Alpha Vantage API.
+
     def __init__(self):
         pass
 
     def process_fundamental_data_overview(self, **kwargs):
         # Process fundamental data for a list of stocks.
+        # Extract relevant information from the input stock data.
+        # Remove empty values from the input data.
+        # Calculate gross profit margin.
+        # Return a list of relevant information for each company.
 
         stock_data = kwargs.get("stock_data")
         
@@ -55,6 +69,10 @@ class DataProcessor:
 
     def process_fundamental_data_income(self, **kwargs):
         # Process fundamental data for a list of stocks.
+        # Extract relevant information from the input stock data.
+        # Remove empty values from the input data.
+        # Calculate gross profit margin, operating margin, and net profit margin.
+        # Return a list of relevant information for each company.
 
         stock_data = kwargs.get("stock_data")
         threshold_date = kwargs.get("threshold_date", '2021-01-01') 
@@ -104,6 +122,10 @@ class DataProcessor:
 
     def process_fundamental_data_balance_sheet(self, **kwargs):
         # Process fundamental data for a list of stocks.
+        # Extract relevant information from the input stock data.
+        # Remove empty values from the input data.
+        # Calculate debt to equity ratio, current ratio, and return on equity.
+        # Return a list of relevant information for each company.
 
         stock_data = kwargs.get("stock_data")
         threshold_date = kwargs.get("threshold_date", '2021-01-01')
@@ -150,6 +172,9 @@ class DataProcessor:
 
     def process_fundamental_data_cash_flow(self, **kwargs):
         # Process fundamental data for a list of stocks.
+        # Extract relevant information from the input stock data.
+        # Remove empty values from the input data.
+        # Return a list of relevant information for each company.
 
         stock_data = kwargs.get("stock_data")
         threshold_date = kwargs.get("threshold_date", '2021-01-01')

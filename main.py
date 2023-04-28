@@ -19,6 +19,12 @@ def main():
 
     data_fetcher = DataFetcher(api_key=alpha_vantage_key, data_path=data_path)
     data_processor = DataProcessor()
+    
+    
+    symbols_list = ["NVDA", "IBM"]
+
+    data_fetcher.fetch_latest_stock_price_vol(symbols_list = symbols_list, period = "monthly", max_stock_price = 1000)
+
 
     try:
         symbols_list, df_listed_stocks = data_fetcher.fetch_stocks_listing(status="active", assetType="stock")
@@ -55,6 +61,10 @@ def main():
         
 
 
+
+
+
+
     company_symbol_key = "Symbol"
     company_symbol_stock = "NVDA"
     
@@ -86,7 +96,27 @@ def main():
                                                                   company_symbol = company_symbol_stock)
 
     company_analyze.append(company_analyze_temp)
-    
+
+
+
+
+    # Generate input for GPT-3
+    question = "Provide Warren Buffet's investment criteria evaluation and provide detailed reasoning for each category, rate each category 1-10 (1=negative and 10=positive) if company is a good investment, and tell if summarized information in each category are positive or negative and why: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, if company is undervalued or overvalued, and based on the provided information evaluate its growth potential. Please provide answer in the form of a table only that contains with columns (Investment Criteria, Score, Positive/Negative, Reasoning) and rows, also each value in every column is separated by comma only."
+    input_text = question + str(company_analyze_temp.copy())
+
+    # Query GPT-3
+    response = openai.Completion.create(
+        engine="text-davinci-002",
+        prompt=input_text,
+        max_tokens=2048 ,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
+
+    # Print GPT-3's response
+    print(response.choices[0].text.strip())
+        
 
 if __name__ == '__main__':
     main()
