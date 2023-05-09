@@ -24,6 +24,7 @@ class DataFetcher:
         self.base_url = base_url
         self.data_path = data_path
         self.listed_stocks_file_name = "listed_stocks.csv"
+        self.latest_downloaded_stocks = "latest_downloaded_stocks.csv"
         self.outputsize = "full"
         self.stock_price_close = "5. adjusted close"
         self.trading_volume = "6. volume"
@@ -322,14 +323,26 @@ class DataFetcher:
         symbols_list = kwargs.get("symbols_list")
         period = kwargs.get("period", "monthly")
         max_stock_price = kwargs.get("max_stock_price", 10)
+        file_path_latest_downloaded_stocks = os.path.join(self.data_path, self.latest_downloaded_stocks)
+
 
         if period not in ["daily", "weekly", "monthly"]:
             raise ValueError("period must be either 'daily', 'weekly', or 'monthly'")
 
-        df_stocks = self._get_stock_price_vol(symbols_list = symbols_list, period = period)
 
-        df_stocks['stock_price_close'] = df_stocks['stock_price_close'].astype(int)
-        df_stocks['trading_volume'] = df_stocks['trading_volume'].astype(int)
+        if not os.path.exists(file_path_latest_downloaded_stocks):
+            print("CSV file for file path latest downloaded stocks not found. Fetching data...")
+            df_stocks = self._get_stock_price_vol(symbols_list = symbols_list, period = period)
+            save_dataframe_to_csv(df_stocks, file_path_latest_downloaded_stocks)
+            print("Latest downloaded stocks data saved to CSV file.")
+        else:
+            print("CSV file for Latest downloaded stocks found. Loading data...")
+            df_stocks = pd.read_csv(file_path_latest_downloaded_stocks)
+            print("Latest downloaded stocks data loaded from CSV file.")
+
+
+        df_stocks['stock_price_close'] = df_stocks['stock_price_close'].astype(float)
+        df_stocks['trading_volume'] = df_stocks['trading_volume'].astype(float)
 
         mask = (df_stocks["stock_price_close"] > 0) & (df_stocks["stock_price_close"] < max_stock_price) & (df_stocks["trading_volume"] > 0) 
         df_stocks = df_stocks.loc[mask].groupby("company").apply(lambda x: x[x["trading_date"] == x["trading_date"].max()]).reset_index(drop = True)
