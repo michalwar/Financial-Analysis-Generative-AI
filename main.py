@@ -2,6 +2,9 @@
 
 import os
 import openai
+import pandas as pd
+import time
+from tqdm import tqdm
 
 from data_fetcher import DataFetcher
 from data_processing import DataProcessor
@@ -28,7 +31,7 @@ def main():
         
 
     try:
-        df_stocks_price = data_fetcher.fetch_latest_stock_price_vol(symbols_list = symbols_list, period = "monthly", max_stock_price = 10)
+        df_stocks_price = data_fetcher.fetch_latest_stock_price_vol(symbols_list = symbols_list, period = "monthly", max_stock_price = 5)
     except Exception as e:
         print(f"Error fetching stocks listing: {e}")
 
@@ -63,101 +66,111 @@ def main():
 
 
 
-
-
-
     company_symbol_key = "Symbol"
-    company_symbol_stock = "NVDA"
-    
-    company_analyze_temp = []
-    company_analyze = []
-
-
-    company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_overview, 
-                                                                  key = company_symbol_key,
-                                                                  company_symbol = company_symbol_stock)
-
-    company_analyze.append(company_analyze_temp)
-
-    company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_income_statement, 
-                                                                  key = company_symbol_key, 
-                                                                  company_symbol = company_symbol_stock)
-
-    company_analyze.append(company_analyze_temp)
-
-    company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_balance_sheet,
-                                                                  key = company_symbol_key,
-                                                                  company_symbol = company_symbol_stock)
-    
-    company_analyze.append(company_analyze_temp)
-    
-
-    company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_cash_flow,
-                                                                  key = company_symbol_key,
-                                                                  company_symbol = company_symbol_stock)
-
-    company_analyze.append(company_analyze_temp)
+    final_response = []
+    company_symbol_stock_list = df_stocks_price.loc[:, 'company']
+    start_time = time.time()
+    max_attempts = 100
 
 
 
-
-    # Generate input for GPT-3
-    #question = "Provide Warren Buffet's investment criteria evaluation and provide detailed reasoning for each category, rate each category 1-10 (1=negative and 10=positive) if company is a good investment, and tell if summarized information in each category are positive or negative and why: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, if company is undervalued or overvalued, and based on the provided information evaluate its growth potential. Please provide answer in the form of a table only that contains with columns (Investment Criteria, Score, Positive/Negative, Reasoning) and rows, also each value in every column is separated by comma only."
-    question = "Analyze and evaluate the Warren Buffet's investment criteria for a company using the following categories: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, and whether the company is undervalued or overvalued. For each category, provide a score from 1-10 (1=negative, 10=positive), indicate if the category is positive or negative, and explain your reasoning. Present your analysis in a table with columns labeled 'Investment Criteria', 'Score', 'Positive/Negative', and 'Reasoning'. Each value in the columns and columns present using Python syntax that creates Pandas dataframe."
-    input_text = question + str(company_analyze_temp.copy())
-
-    # Query GPT-3
-    response = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=input_text,
-        max_tokens=2048 ,
-        n=1,
-        stop=None,
-        temperature=0.5,
-    )
-
-    # Print GPT-3's response
-    print(response.choices[0].text.strip())
-
-    # Query GPT-4
-    llm_model = "gpt-4"
-    llm_message = [
-        {"role": "user", "content": input_text}
-    ]
-
-    llm_message = [
-        {"role": "user", "content": "Transform this content to Python syntax that creates pandas data frame:" + response['choices'][0]['message']['content']}
-    ]
-
-    response = openai.ChatCompletion.create(
-        model = llm_model,
-        messages = llm_message
-    )
-
-    print(response['choices'][0]['message']['content'])        
+    for company_symbol_stock in tqdm(company_symbol_stock_list, desc="Analysing companies", unit="stock"):
+        print(f"AI working on company symbol: {company_symbol_stock}...")
+        attempts = 0
+        while attempts < max_attempts:
+            try:
+                company_analyze_temp = []
+                company_analyze = []
 
 
+                company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_overview, 
+                                                                            key = company_symbol_key,
+                                                                            company_symbol = company_symbol_stock)
+
+                company_analyze.append(company_analyze_temp)
+
+                company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_income_statement, 
+                                                                            key = company_symbol_key, 
+                                                                            company_symbol = company_symbol_stock)
+
+                company_analyze.append(company_analyze_temp)
+
+                company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_balance_sheet,
+                                                                            key = company_symbol_key,
+                                                                            company_symbol = company_symbol_stock)
+                
+                company_analyze.append(company_analyze_temp)
+                
+
+                company_analyze_temp = data_fetcher.fetch_company_data_by_key(stock_data = all_results_cash_flow,
+                                                                            key = company_symbol_key,
+                                                                            company_symbol = company_symbol_stock)
+
+                company_analyze.append(company_analyze_temp)
+
+
+                # Prompt engineering
+                #question = "Provide Warren Buffet's investment criteria evaluation and provide detailed reasoning for each category, rate each category 1-10 (1=negative and 10=positive) if company is a good investment, and tell if summarized information in each category are positive or negative and why: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, if company is undervalued or overvalued, and based on the provided information evaluate its growth potential. Please provide answer in the form of a table only that contains with columns (Investment Criteria, Score, Positive/Negative, Reasoning) and rows, also each value in every column is separated by comma only."
+                #question = f"Analyze and evaluate the Warren Buffet's investment criteria for company {company_symbol_stock} using the following categories: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, and whether the company is undervalued or overvalued. All {company_symbol_stock}'s fiancial resultas are provided at the end of this message. For each category, provide a score from 1-10 (1=negative, 10=positive), indicate if the category is positive or negative, and explain your reasoning. Present your analysis in a table with columns labeled 'Investment Criteria', 'Score', 'Positive/Negative', and 'Reasoning'. Each value in the columns and columns present using Python syntax that creates Pandas dataframe (response should containt only content of Python Pandas syntax, nothing else)."
+                
+                format_response = """
+                                data = {
+                                "Investment Criteria": ["Financial Health", "Valuation", "Margin of Safety", "Profitability", "Dividends", "Debt", "Return on Equity", "Capital Expenditures", "Undervalued or Overvalued", "Growth Potential"],
+                                "Score": [Score for each criteria],
+                                "Positive/Negative": [Evaluation for each criteria],
+                                "Reasoning": [Reasoning for each score]
+                                }
+                    """
+                
+                question = f"Analyze and evaluate the Warren Buffet's investment criteria for company {company_symbol_stock} using the following categories: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, and whether the company is undervalued or overvalued. All {company_symbol_stock}'s fiancial resultas are provided at the end of this message. For each category, provide Score from 1-10 (1=negative, 10=positive), indicate if the category is positive or negative, and explain your reasoning. Present your analysis with labeles 'Investment Criteria', 'Score', 'Positive/Negative', and 'Reasoning' using exactly the following format {format_response}"
+                input_text = question + str(company_analyze_temp.copy())
 
 
 
+                # Query GPT-4
+                
+                llm_model = "gpt-4"
+                llm_message = [
+                    {"role": "user", "content": input_text}
+                ]
 
 
+                response = openai.ChatCompletion.create(
+                    model = llm_model,
+                    messages = llm_message
+                )
 
 
+                final_response.append([company_symbol_stock, response['choices'][0]['message']['content']])
 
 
+                # Save list to csv file where each row is a list item 
+                # Check if the list is not empty
+                if final_response:
+                    # Convert the list to a DataFrame
+                    df = pd.DataFrame(final_response)
+                    
+                    # Write the DataFrame to a CSV file
+                    df.to_csv(f"{data_path}final_response.csv", index = False, header = False)
 
 
-    import pandas as pd
+                print(f"...finished and saved results to {data_path}final_response.csv")
+                break  # Exit the loop if the request is successful
 
-    data = {"Investment Criteria": ["Financial Health", "Valuation", "Margin of Safety", "Profitability", "Dividends", "Debt", "Return on Equity", "Capital Expenditures", "Undervalued or Overvalued", "Growth Potential"],
-            "Score": [8, 9, 8, 7, 6, None, None, 7, 9, 8],
-            "Positive/Negative": ["Positive", "Positive", "Positive", "Positive", "Positive", "Not Available", "Not Available", "Positive", "Positive", "Positive"],
-            "Reasoning": ["Stable operating cash flow, increasing from the year 2021 to 2022.", "Company seems to be undervalued with continuous growth in its financial health.", "Increased operating cash flow indicates the company has a good margin of safety.", "Positive operating cash flow throughout three years.", "Constant dividend payouts throughout the years.", "The required data for evaluating debt is not provided.", "The required data for evaluating return on equity is not provided.", "Capital expenditure increased from 2021 to 2022, followed by a decrease in 2023, indicating investments in growth.", "Based on the given data, the company appears to be undervalued with strong financial metrics.", "Company has demonstrated growth, with increasing operating cashflow and capital expenditures indicating expansion plans."]}
+            except Exception as e:
+                print(f"Error fetching data for {company_symbol_stock}: {e}. Retrying...")
+                attempts += 1
+                time.sleep(2)  # Wait before retrying the request
+        
 
-    df = pd.DataFrame(data)
+            if attempts == max_attempts:
+                print(f"Failed to fetch data for {company_symbol_stock} after {max_attempts} attempts. Skipping...")
+            
+            time.sleep(1)  # Wait xx seconds between requests to avoid hitting API rate limits
 
-    print(df)
+        elapsed_time = time.time() - start_time
+        print(f"Total time elapsed: {elapsed_time:.2f} seconds")
+
 
 
 if __name__ == '__main__':

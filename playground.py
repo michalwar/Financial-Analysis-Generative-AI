@@ -509,3 +509,50 @@ print(file_list)
 
 ftp.quit()
 
+
+
+    # llm_message = [
+    #     {"role": "user", "content": "Transform this content to Python syntax that creates pandas data frame:" + response['choices'][0]['message']['content']}
+    # ]
+
+    """
+    # Query GPT-3
+    response = openai.Completion.create(
+        engine="text-davinci-002",
+        prompt=input_text,
+        max_tokens=2048 ,
+        n=1,
+        stop=None,
+        temperature=0.5,
+    )
+
+    # Print GPT-3's response
+    print(response.choices[0].text.strip())
+    """
+
+    """
+    import pandas as pd
+
+    data = {"Investment Criteria": ["Financial Health", "Valuation", "Margin of Safety", "Profitability", "Dividends", "Debt", "Return on Equity", "Capital Expenditures", "Undervalued or Overvalued", "Growth Potential"],
+            "Score": [8, 9, 8, 7, 6, None, None, 7, 9, 8],
+            "Positive/Negative": ["Positive", "Positive", "Positive", "Positive", "Positive", "Not Available", "Not Available", "Positive", "Positive", "Positive"],
+            "Reasoning": ["Stable operating cash flow, increasing from the year 2021 to 2022.", "Company seems to be undervalued with continuous growth in its financial health.", "Increased operating cash flow indicates the company has a good margin of safety.", "Positive operating cash flow throughout three years.", "Constant dividend payouts throughout the years.", "The required data for evaluating debt is not provided.", "The required data for evaluating return on equity is not provided.", "Capital expenditure increased from 2021 to 2022, followed by a decrease in 2023, indicating investments in growth.", "Based on the given data, the company appears to be undervalued with strong financial metrics.", "Company has demonstrated growth, with increasing operating cashflow and capital expenditures indicating expansion plans."]}
+    data = {
+    "Investment Criteria": ["Financial Health", "Valuation", "Margin of Safety", "Profitability", "Dividends", "Debt", "Return on Equity", "Capital Expenditures", "Undervalued or Overvalued"],
+    "Score": [8, 6, 5, 7, 7, 9, 6, 4, 5],
+    "Positive/Negative": ["Positive", "Positive", "Neutral", "Positive", "Positive", "Positive", "Positive", "Negative", "Neutral"],
+    "Reasoning": [
+        "Financial Health: Operating cash flow has increased slightly from 2021 to 2022, showing a relatively stable financial position.",
+        "Valuation: Without specific valuation metrics, it's hard to give a precise score. However, the company seems to be operating well, so a slightly positive score is given.",
+        "Margin of Safety: Insufficient information to accurately assess the company's margin of safety. A neutral score is given as the company does not seem to be in immediate danger, but there is not enough information to be sure.",
+        "Profitability: Even though operating cash flow has increased slightly, this shows the company is generating profits consistently, so a positive score is given.",
+        "Dividends: The company has consistently increased its dividend payout from 2021 to 2022, which is a positive sign for investors.",
+        "Debt: No debt information available, but given the company's operating cash flow, it is likely to have a manageable debt level, earning a positive score.",
+        "Return on Equity: Insufficient information to give a precise score, but with consistent profitability and dividend payouts, the company seems to be generating returns for investors, so a positive score is given.",
+        "Capital Expenditures: The company has a relatively high level of capital expenditures compared to its operating cash flow, reducing the overall score in this category.",
+        "Undervalued or Overvalued: Insufficient information to accurately determine if the company is under or overvalued, so a neutral score is given."
+    ]}
+        df = pd.DataFrame(data)
+
+        print(df)
+    """
