@@ -1,16 +1,17 @@
-
+import re
+import json
 import numpy as np
 import pandas as pd
 import os
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 import requests
 import time
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import DataLoader, Dataset
+# import torch
+# import torch.nn as nn
+# import torch.nn.functional as F
+# import torch.optim as optim
+# from torch.utils.data import DataLoader, Dataset
 
 
 import plotly.graph_objects as go
@@ -23,6 +24,53 @@ from alpha_vantage.timeseries import TimeSeries
 
 print("All libraries loaded")
 
+
+def extract_data(s):
+    match = re.search(r'data = (.*)', s, re.DOTALL)
+    return match.group(1) if match else None
+
+
+file_path = "D:\\Projects\\git\\financial_analysis_wb\\data\\final_response__till.csv"
+df_raw = pd.read_csv(file_path)
+df_raw.loc[:, "data_2"] = df_raw.loc[:, "data"].apply(lambda x: extract_data(x))
+
+
+mask = df_raw.loc[:, "data_2"].apply(lambda x: x is not None)
+df_raw_filtered = df_raw.loc[mask, :]
+
+
+# loop through all values from the column name "company" and extract the data
+# and concatanate it to a dataframe
+df_final = pd.DataFrame()
+for company in df_raw_filtered.loc[:, "company"].unique():
+    
+    if company not in ["ADN", "AFIB", "ALTO"]:
+        print(company)
+        """
+        company = "AMPY"
+        """
+        string_1 = " Note: The score values of 0 in some criteria represent incomplete information for those criteria, not necessarily a neutral result."
+
+        mask = df_raw_filtered.loc[:, "company"] == company
+        string_json = df_raw_filtered.loc[mask, "data_2"].replace("\\n", "\\n ", regex = True).values[0]
+        string_json = string_json.replace("None", "\"None\"") \
+            .replace("\'Negative\'", "\"Negative\"") \
+            .replace("\'Neutral\'", "\"Neutral\"") \
+            .replace("\'Positive\'", "\"Positive\"") \
+            .replace(string_1, "") \
+            .replace("\'NA\'", "\"None\"") \
+            .replace("\'N/A\'", "\"None\"") \
+            .replace("f\"", "\"")
+        """
+        print(string_json)
+        """
+        json_payload = json.loads(string_json)
+        df_temp = pd.DataFrame(json_payload)
+        df_temp.loc[:, "company"] = company
+        df_final = pd.concat([df_final, df_temp], axis = 0)
+
+# save this dataframe to a csv file
+df_final.to_csv("data/final_response__till_end.csv", index = False)
 
 
 
