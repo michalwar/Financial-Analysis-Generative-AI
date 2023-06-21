@@ -1,6 +1,6 @@
 # Stock Analysis PoC
 
-This project aims to develop a PoC solution for stock analysis and recommendation using financial data and ChatGPT API.
+This project aims to develop a PoC solution for stock analysis and recommendation using financial data and OpenAI API to GPT model.
 
 ## Table of Contents
 
