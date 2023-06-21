@@ -7,7 +7,7 @@ This project aims to develop a PoC solution for stock analysis and recommendatio
 1. [Data Collection](#data-collection)
 2. [Data Preprocessing](#data-preprocessing)
 3. [Feature Selection](#feature-selection)
-4. [Integration with OpenAI API](#integration-with-apenai-api)
+4. [Integration with OpenAI API](#integration-with-openai-api)
 5. [Company Evaluation](#company-evaluation)
 6. [Stock Recommendations](#stock-recommendations)
 7. [Output Presentation](#output-presentation)
