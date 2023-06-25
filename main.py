@@ -31,7 +31,8 @@ def main():
         
 
     try:
-        df_stocks_price = data_fetcher.fetch_latest_stock_price_vol(symbols_list = symbols_list, period = "monthly", max_stock_price = 5)
+        max_stock_price = 10000
+        df_stocks_price = data_fetcher.fetch_latest_stock_price_vol(symbols_list = symbols_list, period = "monthly", max_stock_price = max_stock_price)
     except Exception as e:
         print(f"Error fetching stocks listing: {e}")
 
@@ -64,11 +65,12 @@ def main():
         print(f"Error fetching and processing cash flow data: {e}")
         
 
-
+    mask = df_stocks_price['company'].isin(['LCID', 'RIVN', 'U'])
+    df_stocks_price_temp = df_stocks_price.loc[mask].copy()
 
     company_symbol_key = "Symbol"
     final_response = []
-    company_symbol_stock_list = df_stocks_price.loc[:, 'company']
+    company_symbol_stock_list = df_stocks_price_temp.loc[:, 'company'].reset_index(drop = True)
     start_time = time.time()
     max_attempts = 100
 
@@ -79,6 +81,11 @@ def main():
         attempts = 0
         while attempts < max_attempts:
             try:
+                """
+                company_symbol_stock = "LCID"
+                
+                """
+                
                 company_analyze_temp = []
                 company_analyze = []
 
