@@ -1,13 +1,13 @@
 # Stock Analysis PoC
 
-This project aims to develop a PoC solution for stock analysis and recommendation using financial data and ChatGPT API.
+This project aims to develop a PoC solution for stock analysis and recommendation using financial data and OpenAI API to GPT model.
 
 ## Table of Contents
 
 1. [Data Collection](#data-collection)
 2. [Data Preprocessing](#data-preprocessing)
 3. [Feature Selection](#feature-selection)
-4. [Integration with ChatGPT API](#integration-with-chatgpt-api)
+4. [Integration with OpenAI API](#integration-with-openai-api)
 5. [Company Evaluation](#company-evaluation)
 6. [Stock Recommendations](#stock-recommendations)
 7. [Output Presentation](#output-presentation)
@@ -45,14 +45,14 @@ This project aims to develop a PoC solution for stock analysis and recommendatio
   - Return on equity.
   - Valuation ratios.
 
-## Integration with ChatGPT API
+## Integration with OpenAI API
 
 - Send preprocessed data as context/input.
 - Include prompt for company evaluation.
 
 ## Company Evaluation
 
-- Parse ChatGPT API responses.
+- Parse OpenAI API responses.
 - Implement scoring system or ranking method.
 
 ## Stock Recommendations
