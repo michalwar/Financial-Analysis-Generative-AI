@@ -9,7 +9,7 @@ from tqdm import tqdm
 from data_fetcher import DataFetcher
 from data_processing import DataProcessor
 
-
+from prompt_engineering import prompt_task, prompt_task_support, type_response, format_response, llm_model
 
 
 def main():
@@ -116,27 +116,11 @@ def main():
                 company_analyze.append(company_analyze_temp)
 
 
-                # Prompt engineering
-                #question = "Provide Warren Buffet's investment criteria evaluation and provide detailed reasoning for each category, rate each category 1-10 (1=negative and 10=positive) if company is a good investment, and tell if summarized information in each category are positive or negative and why: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, if company is undervalued or overvalued, and based on the provided information evaluate its growth potential. Please provide answer in the form of a table only that contains with columns (Investment Criteria, Score, Positive/Negative, Reasoning) and rows, also each value in every column is separated by comma only."
-                #question = f"Analyze and evaluate the Warren Buffet's investment criteria for company {company_symbol_stock} using the following categories: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, and whether the company is undervalued or overvalued. All {company_symbol_stock}'s fiancial resultas are provided at the end of this message. For each category, provide a score from 1-10 (1=negative, 10=positive), indicate if the category is positive or negative, and explain your reasoning. Present your analysis in a table with columns labeled 'Investment Criteria', 'Score', 'Positive/Negative', and 'Reasoning'. Each value in the columns and columns present using Python syntax that creates Pandas dataframe (response should containt only content of Python Pandas syntax, nothing else)."
-                
-                format_response = """
-                                data = {
-                                "Investment Criteria": ["Financial Health", "Valuation", "Margin of Safety", "Profitability", "Dividends", "Debt", "Return on Equity", "Capital Expenditures", "Undervalued or Overvalued", "Growth Potential"],
-                                "Score": [Score for each criteria],
-                                "Positive/Negative": [Evaluation for each criteria],
-                                "Reasoning": [Reasoning for each score]
-                                }
-                    """
-                
-                question = f"Analyze and evaluate the Warren Buffet's investment criteria for company {company_symbol_stock} using the following categories: Financial Health, Valuation, Margin of Safety, Profitability, Dividends, Debt, Return on Equity, Capital Expenditures, and whether the company is undervalued or overvalued. All {company_symbol_stock}'s fiancial resultas are provided at the end of this message. For each category, provide Score from 1-10 (1=negative, 10=positive), indicate if the category is positive or negative, and explain your reasoning. Present your analysis with labeles 'Investment Criteria', 'Score', 'Positive/Negative', and 'Reasoning' using exactly the following format {format_response}"
+                question = f"{prompt_task} {company_symbol_stock}, {prompt_task_support}. All {company_symbol_stock}'s {type_response}: {format_response}"
                 input_text = question + str(company_analyze_temp.copy())
 
-
-
-                # Query GPT-4
                 
-                llm_model = "gpt-4"
+                llm_model = llm_model
                 llm_message = [
                     {"role": "user", "content": input_text}
                 ]
