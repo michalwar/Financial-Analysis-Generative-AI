@@ -19,6 +19,7 @@ from prompt_engineering import (
 
 
 def main():
+    
     data_path = "data/"
     alpha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY")
     openai.organization = os.getenv("OPENAI_ORG_ID")
